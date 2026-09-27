@@ -1,0 +1,6 @@
+{
+  "name": "DRIFT — Draped in Stories | Haute Couture Sarees",
+  "description": "Cinematic, scroll-driven luxury women's fashion and artisanal silk saree maison.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
