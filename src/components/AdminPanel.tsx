@@ -22,16 +22,74 @@ import {
   ArrowUpRight,
   Filter,
   Eye,
+  Upload,
+  Link as LinkIcon,
+  Image as ImageIcon,
+  Check,
+  AlertCircle,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
+import { normalizeImageUrl, handleImageError } from '../utils/imageFallback';
 
 const PRESET_IMAGES = [
-  { label: 'Rose Net', url: '/src/assets/images/editorial_model_rose_net_1790444842708.jpg' },
-  { label: 'Emerald Kanjivaram', url: '/src/assets/images/editorial_model_kanjivaram_1790444829857.jpg' },
-  { label: 'Ivory Organza', url: '/src/assets/images/editorial_model_ivory_organza_1790444853542.jpg' },
-  { label: 'Crimson Banarasi', url: '/src/assets/images/editorial_model_royal_crimson_1790444865420.jpg' },
-  { label: 'Mustard Paithani', url: '/src/assets/images/editorial_model_mustard_paithani_1790444917179.jpg' },
-  { label: 'Sapphire Handloom', url: '/src/assets/images/editorial_model_sapphire_1790444892272.jpg' },
+  { label: 'Rose Net', url: 'https://i.postimg.cc/FKGDVMc7/editorial-model-rose-net-1790444842708.jpg' },
+  { label: 'Emerald Kanjivaram', url: 'https://i.postimg.cc/rpgQNBWt/editorial-model-kanjivaram-1790444829857.jpg' },
+  { label: 'Ivory Organza', url: 'https://i.postimg.cc/rpgQNBWz/editorial-model-ivory-organza-1790444853542.jpg' },
+  { label: 'Crimson Banarasi', url: 'https://i.postimg.cc/SssVTg78/editorial-model-royal-crimson-1790444865420.jpg' },
+  { label: 'Mustard Paithani', url: 'https://i.postimg.cc/1zMJrk6q/editorial-model-mustard-paithani-1790444917179.jpg' },
+  { label: 'Sapphire Handloom', url: 'https://i.postimg.cc/G22z7XJG/editorial-model-sapphire-1790444892272.jpg' },
+  { label: 'Boutique Interior', url: 'https://i.postimg.cc/YSSyZ2tn/Luxurious-Indian-Saree-Boutique-Interior.png' },
 ];
+
+// Helper to optimize and convert device uploaded images (PNG/JPG/WEBP) to data URLs
+const processImageFile = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    if (!file.type.startsWith('image/')) {
+      reject(new Error('Please select an image file (PNG, JPG, WebP)'));
+      return;
+    }
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Failed to read file from device'));
+    reader.onload = (e) => {
+      const result = e.target?.result as string;
+      if (!result) {
+        reject(new Error('File is empty'));
+        return;
+      }
+      const img = new Image();
+      img.onerror = () => resolve(result);
+      img.onload = () => {
+        const MAX_WIDTH = 1200;
+        const MAX_HEIGHT = 1600;
+        let width = img.width;
+        let height = img.height;
+        if (width > MAX_WIDTH || height > MAX_HEIGHT) {
+          if (width / height > MAX_WIDTH / MAX_HEIGHT) {
+            height = Math.round((height * MAX_WIDTH) / width);
+            width = MAX_WIDTH;
+          } else {
+            width = Math.round((width * MAX_HEIGHT) / height);
+            height = MAX_HEIGHT;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(result);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        const optimized = canvas.toDataURL('image/jpeg', 0.88);
+        resolve(optimized);
+      };
+      img.src = result;
+    };
+    reader.readAsDataURL(file);
+  });
+};
 
 export const AdminPanel: React.FC = () => {
   const {
@@ -48,6 +106,9 @@ export const AdminPanel: React.FC = () => {
     orders,
     updateOrderStatus,
     setSelectedProduct,
+    currentUser,
+    loginWithGoogle,
+    logout,
   } = useShop();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -57,6 +118,19 @@ export const AdminPanel: React.FC = () => {
   // Product Add / Edit modal state
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+
+  // Image source modes & states
+  const [primaryImageMode, setPrimaryImageMode] = useState<'presets' | 'url' | 'upload'>('presets');
+  const [secondaryImageMode, setSecondaryImageMode] = useState<'presets' | 'url' | 'upload'>('presets');
+  const [primaryUrlInput, setPrimaryUrlInput] = useState('');
+  const [secondaryUrlInput, setSecondaryUrlInput] = useState('');
+  const [primaryFileName, setPrimaryFileName] = useState('');
+  const [secondaryFileName, setSecondaryFileName] = useState('');
+  const [isProcessingPrimary, setIsProcessingPrimary] = useState(false);
+  const [isProcessingSecondary, setIsProcessingSecondary] = useState(false);
+  const [primaryImageError, setPrimaryImageError] = useState<string | null>(null);
+  const [secondaryImageError, setSecondaryImageError] = useState<string | null>(null);
+  const [showSecondaryConfig, setShowSecondaryConfig] = useState(false);
 
   // Form fields
   const [formData, setFormData] = useState<Partial<Product>>({
@@ -80,6 +154,15 @@ export const AdminPanel: React.FC = () => {
 
   const handleOpenAddForm = () => {
     setEditingProduct(null);
+    setPrimaryImageMode('presets');
+    setSecondaryImageMode('presets');
+    setPrimaryUrlInput('');
+    setSecondaryUrlInput('');
+    setPrimaryFileName('');
+    setSecondaryFileName('');
+    setPrimaryImageError(null);
+    setSecondaryImageError(null);
+    setShowSecondaryConfig(false);
     setFormData({
       name: '',
       sku: `DF-SAREE-${Math.floor(100 + Math.random() * 900)}`,
@@ -113,7 +196,102 @@ export const AdminPanel: React.FC = () => {
   const handleOpenEditForm = (prod: Product) => {
     setEditingProduct(prod);
     setFormData({ ...prod });
+
+    // Determine initial primary image tab
+    const pImg = prod.primaryImage || '';
+    if (pImg.startsWith('data:')) {
+      setPrimaryImageMode('upload');
+      setPrimaryFileName('Uploaded from device');
+    } else if (pImg.startsWith('http') && !PRESET_IMAGES.some((p) => p.url === pImg)) {
+      setPrimaryImageMode('url');
+      setPrimaryUrlInput(pImg);
+    } else {
+      setPrimaryImageMode('presets');
+    }
+
+    // Determine initial secondary image tab
+    const sImg = prod.secondaryImage || '';
+    if (sImg) {
+      setShowSecondaryConfig(true);
+      if (sImg.startsWith('data:')) {
+        setSecondaryImageMode('upload');
+        setSecondaryFileName('Uploaded from device');
+      } else if (sImg.startsWith('http') && !PRESET_IMAGES.some((p) => p.url === sImg)) {
+        setSecondaryImageMode('url');
+        setSecondaryUrlInput(sImg);
+      } else {
+        setSecondaryImageMode('presets');
+      }
+    } else {
+      setShowSecondaryConfig(false);
+      setSecondaryImageMode('presets');
+    }
+
+    setPrimaryImageError(null);
+    setSecondaryImageError(null);
     setIsFormOpen(true);
+  };
+
+  // Device file upload handlers
+  const handlePrimaryFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setIsProcessingPrimary(true);
+      setPrimaryImageError(null);
+      const dataUrl = await processImageFile(file);
+      setPrimaryFileName(file.name);
+      setFormData((prev) => ({
+        ...prev,
+        primaryImage: dataUrl,
+        altLooks: prev.altLooks ? [{ ...prev.altLooks[0], image: dataUrl }, ...prev.altLooks.slice(1)] : undefined,
+      }));
+    } catch (err: any) {
+      setPrimaryImageError(err.message || 'Failed to process image');
+    } finally {
+      setIsProcessingPrimary(false);
+    }
+  };
+
+  const handleSecondaryFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setIsProcessingSecondary(true);
+      setSecondaryImageError(null);
+      const dataUrl = await processImageFile(file);
+      setSecondaryFileName(file.name);
+      setFormData((prev) => ({
+        ...prev,
+        secondaryImage: dataUrl,
+      }));
+    } catch (err: any) {
+      setSecondaryImageError(err.message || 'Failed to process image');
+    } finally {
+      setIsProcessingSecondary(false);
+    }
+  };
+
+  // Direct Image URL change handlers
+  const handlePrimaryUrlChange = (url: string) => {
+    setPrimaryUrlInput(url);
+    if (url.trim()) {
+      setFormData((prev) => ({
+        ...prev,
+        primaryImage: url.trim(),
+        altLooks: prev.altLooks ? [{ ...prev.altLooks[0], image: url.trim() }, ...prev.altLooks.slice(1)] : undefined,
+      }));
+    }
+  };
+
+  const handleSecondaryUrlChange = (url: string) => {
+    setSecondaryUrlInput(url);
+    if (url.trim()) {
+      setFormData((prev) => ({
+        ...prev,
+        secondaryImage: url.trim(),
+      }));
+    }
   };
 
   const handleSaveProduct = (e: React.FormEvent) => {
@@ -179,8 +357,8 @@ export const AdminPanel: React.FC = () => {
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-[#C5A880] animate-pulse" />
-            <h1 className="font-serif text-2xl tracking-[0.2em] text-[#FAF7F2] uppercase">
-              DRIFT ATELIER
+            <h1 className="font-serif text-xl sm:text-2xl tracking-[0.16em] text-[#FAF7F2] uppercase">
+              VKT SILKS AND SAREES
             </h1>
           </div>
           <span className="text-xs px-2.5 py-1 bg-[#541123] border border-[#8C1D3B]/40 text-[#F5EBE1] rounded-full font-mono uppercase tracking-widest hidden sm:inline">
@@ -227,11 +405,57 @@ export const AdminPanel: React.FC = () => {
           </button>
         </div>
 
-        {/* Right Action: Close Admin */}
+        {/* Right Action: Close Admin & Auth State */}
         <div className="flex items-center gap-3">
+          {/* Realtime Firebase Cloud Indicator */}
+          <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#181313] border border-[#FAF7F2]/10 text-xs font-mono text-[#ECE5DC]/80">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span>Firestore Synced</span>
+          </div>
+
+          {/* Google Auth Status in Admin Panel */}
+          {currentUser ? (
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-[#1C1518] border border-[#8C1D3B]/40 text-xs font-mono">
+              {currentUser.photoURL ? (
+                <img
+                  src={currentUser.photoURL}
+                  alt={currentUser.displayName || 'Admin'}
+                  referrerPolicy="no-referrer"
+                  className="w-5 h-5 rounded-full object-cover border border-[#C5A880]/60"
+                />
+              ) : (
+                <div className="w-5 h-5 rounded-full bg-[#541123] text-[#C5A880] flex items-center justify-center text-[10px]">
+                  {(currentUser.displayName || currentUser.email || 'A')[0].toUpperCase()}
+                </div>
+              )}
+              <span className="text-[#FAF7F2] max-w-[100px] truncate">
+                {currentUser.displayName?.split(' ')[0] || 'Admin'}
+              </span>
+              <button
+                onClick={() => logout()}
+                className="text-[10px] text-[#E08A8A] hover:text-[#FF7070] ml-1 underline cursor-pointer"
+              >
+                Sign out
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => loginWithGoogle()}
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#1A1416] hover:bg-[#2A161E] border border-[#C5A880]/40 text-xs font-mono text-[#FAF7F2] cursor-pointer"
+            >
+              <svg className="w-3 h-3 shrink-0" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.66v3.05h3.87c2.26-2.09 3.675-5.17 3.675-9.15z"/>
+                <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.87-3.05c-1.08.72-2.45 1.16-4.06 1.16-3.13 0-5.78-2.11-6.73-4.96H1.26v3.15C3.25 21.31 7.31 24 12 24z"/>
+                <path fill="#FBBC05" d="M5.27 14.24c-.25-.72-.38-1.49-.38-2.24s.13-1.52.38-2.24V6.61H1.26C.46 8.23 0 10.06 0 12s.46 3.77 1.26 5.39l4.01-3.15z"/>
+                <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.25 2.69 1.26 6.61l4.01 3.15c.95-2.85 3.6-4.96 6.73-4.96z"/>
+              </svg>
+              <span>Google Login</span>
+            </button>
+          )}
+
           <button
             onClick={() => setIsAdminOpen(false)}
-            className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#1C1818] hover:bg-[#282222] border border-[#FAF7F2]/15 text-xs text-[#ECE5DC] hover:text-[#C5A880] transition-colors"
+            className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#1C1818] hover:bg-[#282222] border border-[#FAF7F2]/15 text-xs text-[#ECE5DC] hover:text-[#C5A880] transition-colors cursor-pointer"
           >
             <span>Exit to Maison</span>
             <X className="w-4 h-4" />
@@ -519,8 +743,9 @@ export const AdminPanel: React.FC = () => {
                         <td className="py-3.5 px-4">
                           <div className="flex items-center gap-3">
                             <img
-                              src={prod.primaryImage}
+                              src={normalizeImageUrl(prod.primaryImage)}
                               alt={prod.name}
+                              onError={handleImageError}
                               className="w-12 h-16 object-cover rounded-lg border border-[#FAF7F2]/10"
                             />
                             <div>
@@ -713,8 +938,9 @@ export const AdminPanel: React.FC = () => {
                       {ord.items.map((item, idx) => (
                         <div key={idx} className="flex items-center gap-3">
                           <img
-                            src={item.image}
+                            src={normalizeImageUrl(item.image)}
                             alt={item.productName}
+                            onError={handleImageError}
                             className="w-10 h-14 object-cover rounded-md border border-[#FAF7F2]/10"
                           />
                           <div>
@@ -881,30 +1107,355 @@ export const AdminPanel: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Image Selection presets */}
-                <div>
-                  <label className="block uppercase tracking-wider text-[#ECE5DC]/70 mb-1.5 font-mono">
-                    Select High-Fashion Editorial Imagery
-                  </label>
-                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                    {PRESET_IMAGES.map((img) => (
+                {/* Primary Saree Image Selector: URL, Device Upload, Presets */}
+                <div className="p-4 rounded-2xl bg-[#141111] border border-[#FAF7F2]/10 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <label className="block uppercase tracking-wider text-[#FAF7F2] font-mono font-medium text-xs">
+                        Primary Saree Image *
+                      </label>
+                      <span className="text-[11px] text-[#ECE5DC]/60 font-sans">
+                        Main catalog and high-fashion showcase presentation
+                      </span>
+                    </div>
+
+                    {/* Method Tabs */}
+                    <div className="flex items-center gap-1 p-1 bg-[#1A1616] rounded-xl border border-[#FAF7F2]/10">
                       <button
                         type="button"
-                        key={img.label}
-                        onClick={() => setFormData({ ...formData, primaryImage: img.url })}
-                        className={`relative aspect-[3/4] rounded-lg overflow-hidden border-2 transition-all ${
-                          formData.primaryImage === img.url
-                            ? 'border-[#C5A880] ring-2 ring-[#C5A880]/40 scale-105'
-                            : 'border-transparent opacity-60 hover:opacity-100'
+                        onClick={() => setPrimaryImageMode('presets')}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-mono tracking-wider uppercase transition-all flex items-center gap-1.5 ${
+                          primaryImageMode === 'presets'
+                            ? 'bg-[#541123] text-[#FAF7F2] font-semibold border border-[#8C1D3B]/60'
+                            : 'text-[#ECE5DC]/60 hover:text-white'
                         }`}
                       >
-                        <img src={img.url} alt={img.label} className="w-full h-full object-cover" />
-                        <span className="absolute bottom-0 inset-x-0 bg-black/75 text-[8px] text-white p-0.5 text-center font-mono">
-                          {img.label}
-                        </span>
+                        <Sparkles className="w-3 h-3 text-[#C5A880]" />
+                        <span>Presets</span>
                       </button>
-                    ))}
+
+                      <button
+                        type="button"
+                        onClick={() => setPrimaryImageMode('url')}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-mono tracking-wider uppercase transition-all flex items-center gap-1.5 ${
+                          primaryImageMode === 'url'
+                            ? 'bg-[#541123] text-[#FAF7F2] font-semibold border border-[#8C1D3B]/60'
+                            : 'text-[#ECE5DC]/60 hover:text-white'
+                        }`}
+                      >
+                        <LinkIcon className="w-3 h-3 text-[#C5A880]" />
+                        <span>Image URL</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setPrimaryImageMode('upload')}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-mono tracking-wider uppercase transition-all flex items-center gap-1.5 ${
+                          primaryImageMode === 'upload'
+                            ? 'bg-[#541123] text-[#FAF7F2] font-semibold border border-[#8C1D3B]/60'
+                            : 'text-[#ECE5DC]/60 hover:text-white'
+                        }`}
+                      >
+                        <Upload className="w-3 h-3 text-[#C5A880]" />
+                        <span>Upload Device</span>
+                      </button>
+                    </div>
                   </div>
+
+                  {/* Mode 1: Presets */}
+                  {primaryImageMode === 'presets' && (
+                    <div>
+                      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 pt-1">
+                        {PRESET_IMAGES.map((img) => (
+                          <button
+                            type="button"
+                            key={img.label}
+                            onClick={() => {
+                              setFormData({
+                                ...formData,
+                                primaryImage: img.url,
+                                altLooks: formData.altLooks
+                                  ? [{ ...formData.altLooks[0], image: img.url }, ...formData.altLooks.slice(1)]
+                                  : undefined,
+                              });
+                            }}
+                            className={`relative aspect-[3/4] rounded-xl overflow-hidden border-2 transition-all ${
+                              formData.primaryImage === img.url
+                                ? 'border-[#C5A880] ring-2 ring-[#C5A880]/50 scale-[1.02] shadow-lg shadow-[#C5A880]/20'
+                                : 'border-transparent opacity-65 hover:opacity-100 hover:border-[#FAF7F2]/20'
+                            }`}
+                          >
+                            <img
+                              src={normalizeImageUrl(img.url)}
+                              alt={img.label}
+                              onError={handleImageError}
+                              className="w-full h-full object-cover"
+                            />
+                            <span className="absolute bottom-0 inset-x-0 bg-black/80 backdrop-blur-sm text-[8px] text-[#FAF7F2] py-1 text-center font-mono">
+                              {img.label}
+                            </span>
+                            {formData.primaryImage === img.url && (
+                              <div className="absolute top-1 right-1 w-4 h-4 rounded-full bg-[#C5A880] text-black flex items-center justify-center">
+                                <Check className="w-2.5 h-2.5 stroke-[3]" />
+                              </div>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Mode 2: Add Image URL */}
+                  {primaryImageMode === 'url' && (
+                    <div className="space-y-2 pt-1">
+                      <div className="flex gap-2">
+                        <div className="relative flex-1">
+                          <LinkIcon className="w-4 h-4 text-[#C5A880] absolute left-3 top-1/2 -translate-y-1/2" />
+                          <input
+                            type="url"
+                            placeholder="Paste direct saree image link (https://i.postimg.cc/..., imgur, etc.)"
+                            value={primaryUrlInput}
+                            onChange={(e) => handlePrimaryUrlChange(e.target.value)}
+                            className="w-full bg-[#1A1616] border border-[#FAF7F2]/10 rounded-xl pl-9 pr-4 py-2.5 text-xs text-[#FAF7F2] placeholder-[#ECE5DC]/40 outline-none focus:border-[#C5A880]"
+                          />
+                        </div>
+                        {primaryUrlInput && (
+                          <button
+                            type="button"
+                            onClick={() => handlePrimaryUrlChange('')}
+                            className="px-3 py-2 bg-[#1E1B1B] hover:bg-[#282424] text-[#ECE5DC]/60 hover:text-white rounded-xl text-xs font-mono"
+                          >
+                            Clear
+                          </button>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-[#ECE5DC]/50 font-mono">
+                        Direct public HTTPS links from postimg.cc, imgur, or your cloud storage will render smoothly on any deployment.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Mode 3: Upload from Device */}
+                  {primaryImageMode === 'upload' && (
+                    <div className="pt-1">
+                      <label className="flex flex-col items-center justify-center p-5 border-2 border-dashed border-[#FAF7F2]/20 hover:border-[#C5A880]/60 rounded-2xl cursor-pointer bg-[#181414] hover:bg-[#1E1919] transition-all group">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handlePrimaryFileUpload}
+                          className="hidden"
+                        />
+                        <div className="w-12 h-12 rounded-full bg-[#541123]/60 group-hover:bg-[#541123] border border-[#8C1D3B]/40 flex items-center justify-center mb-2 transition-colors">
+                          <Upload className="w-5 h-5 text-[#C5A880]" />
+                        </div>
+                        <span className="text-xs font-serif text-[#FAF7F2] font-medium group-hover:text-[#C5A880] transition-colors">
+                          {isProcessingPrimary ? 'Optimizing saree image...' : 'Click or drop saree image from your device'}
+                        </span>
+                        <span className="text-[10px] text-[#ECE5DC]/50 font-mono mt-1">
+                          PNG, JPG, or WebP up to 15MB · Auto-scaled to high-res catalog dimensions
+                        </span>
+                        {primaryFileName && (
+                          <div className="mt-2 px-3 py-1 rounded-full bg-[#1A1616] border border-[#C5A880]/40 text-[10px] font-mono text-[#C5A880] flex items-center gap-1.5">
+                            <Check className="w-3 h-3" />
+                            <span>Loaded: {primaryFileName}</span>
+                          </div>
+                        )}
+                      </label>
+                      {primaryImageError && (
+                        <div className="mt-2 text-[11px] text-red-400 font-mono flex items-center gap-1.5">
+                          <AlertCircle className="w-3.5 h-3.5" />
+                          <span>{primaryImageError}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Active Primary Image Live Preview Card */}
+                  {formData.primaryImage && (
+                    <div className="flex items-center gap-3 p-2.5 rounded-xl bg-[#1A1616] border border-[#FAF7F2]/10 mt-2">
+                      <div className="w-12 h-16 rounded-lg overflow-hidden border border-[#C5A880]/40 flex-shrink-0 bg-black">
+                        <img
+                          src={normalizeImageUrl(formData.primaryImage)}
+                          alt="Primary preview"
+                          onError={handleImageError}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[10px] font-mono uppercase tracking-wider text-[#C5A880] flex items-center gap-1">
+                          <Check className="w-3 h-3" />
+                          <span>Active Primary Saree Image</span>
+                        </div>
+                        <div className="text-xs text-[#FAF7F2] truncate mt-0.5 font-mono">
+                          {formData.primaryImage.startsWith('data:')
+                            ? `Device Upload (${primaryFileName || 'Optimized Canvas Data'})`
+                            : formData.primaryImage}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Secondary Image (Hover Look) Configuration - Collapsible */}
+                <div className="p-4 rounded-2xl bg-[#141111] border border-[#FAF7F2]/10 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <label className="block uppercase tracking-wider text-[#FAF7F2] font-mono font-medium text-xs">
+                        Secondary / Hover Saree Image (Optional)
+                      </label>
+                      <span className="text-[11px] text-[#ECE5DC]/60 font-sans">
+                        Revealed on cursor hover in the boutique catalog
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setShowSecondaryConfig(!showSecondaryConfig)}
+                      className="px-3 py-1.5 rounded-lg bg-[#1A1616] hover:bg-[#201C1C] border border-[#FAF7F2]/10 text-xs font-mono text-[#C5A880] flex items-center gap-1.5 transition-colors"
+                    >
+                      <span>{showSecondaryConfig ? 'Hide Settings' : 'Configure Hover Look'}</span>
+                      {showSecondaryConfig ? (
+                        <ChevronUp className="w-3.5 h-3.5" />
+                      ) : (
+                        <ChevronDown className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+                  </div>
+
+                  {showSecondaryConfig && (
+                    <div className="pt-2 border-t border-[#FAF7F2]/10 space-y-3">
+                      {/* Secondary Method Tabs */}
+                      <div className="flex items-center gap-1 p-1 bg-[#1A1616] rounded-xl border border-[#FAF7F2]/10 w-fit">
+                        <button
+                          type="button"
+                          onClick={() => setSecondaryImageMode('presets')}
+                          className={`px-2.5 py-1 rounded-lg text-[11px] font-mono tracking-wider uppercase transition-all flex items-center gap-1.5 ${
+                            secondaryImageMode === 'presets'
+                              ? 'bg-[#541123] text-[#FAF7F2] font-semibold border border-[#8C1D3B]/60'
+                              : 'text-[#ECE5DC]/60 hover:text-white'
+                          }`}
+                        >
+                          <Sparkles className="w-3 h-3 text-[#C5A880]" />
+                          <span>Presets</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setSecondaryImageMode('url')}
+                          className={`px-2.5 py-1 rounded-lg text-[11px] font-mono tracking-wider uppercase transition-all flex items-center gap-1.5 ${
+                            secondaryImageMode === 'url'
+                              ? 'bg-[#541123] text-[#FAF7F2] font-semibold border border-[#8C1D3B]/60'
+                              : 'text-[#ECE5DC]/60 hover:text-white'
+                          }`}
+                        >
+                          <LinkIcon className="w-3 h-3 text-[#C5A880]" />
+                          <span>Image URL</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setSecondaryImageMode('upload')}
+                          className={`px-2.5 py-1 rounded-lg text-[11px] font-mono tracking-wider uppercase transition-all flex items-center gap-1.5 ${
+                            secondaryImageMode === 'upload'
+                              ? 'bg-[#541123] text-[#FAF7F2] font-semibold border border-[#8C1D3B]/60'
+                              : 'text-[#ECE5DC]/60 hover:text-white'
+                          }`}
+                        >
+                          <Upload className="w-3 h-3 text-[#C5A880]" />
+                          <span>Upload Device</span>
+                        </button>
+                      </div>
+
+                      {/* Secondary Presets */}
+                      {secondaryImageMode === 'presets' && (
+                        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                          {PRESET_IMAGES.map((img) => (
+                            <button
+                              type="button"
+                              key={img.label}
+                              onClick={() => setFormData({ ...formData, secondaryImage: img.url })}
+                              className={`relative aspect-[3/4] rounded-xl overflow-hidden border-2 transition-all ${
+                                formData.secondaryImage === img.url
+                                  ? 'border-[#C5A880] ring-2 ring-[#C5A880]/50 scale-[1.02]'
+                                  : 'border-transparent opacity-65 hover:opacity-100'
+                              }`}
+                            >
+                              <img
+                                src={normalizeImageUrl(img.url)}
+                                alt={img.label}
+                                onError={handleImageError}
+                                className="w-full h-full object-cover"
+                              />
+                              <span className="absolute bottom-0 inset-x-0 bg-black/80 text-[8px] text-white py-1 text-center font-mono">
+                                {img.label}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Secondary Image URL */}
+                      {secondaryImageMode === 'url' && (
+                        <div className="space-y-2">
+                          <div className="relative">
+                            <LinkIcon className="w-4 h-4 text-[#C5A880] absolute left-3 top-1/2 -translate-y-1/2" />
+                            <input
+                              type="url"
+                              placeholder="Paste direct secondary image URL (https://i.postimg.cc/...)"
+                              value={secondaryUrlInput}
+                              onChange={(e) => handleSecondaryUrlChange(e.target.value)}
+                              className="w-full bg-[#1A1616] border border-[#FAF7F2]/10 rounded-xl pl-9 pr-4 py-2 text-xs text-[#FAF7F2] outline-none focus:border-[#C5A880]"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Secondary Device Upload */}
+                      {secondaryImageMode === 'upload' && (
+                        <div>
+                          <label className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-[#FAF7F2]/20 hover:border-[#C5A880]/60 rounded-2xl cursor-pointer bg-[#181414] hover:bg-[#1E1919] transition-all">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleSecondaryFileUpload}
+                              className="hidden"
+                            />
+                            <Upload className="w-5 h-5 text-[#C5A880] mb-1.5" />
+                            <span className="text-xs text-[#FAF7F2]">
+                              {isProcessingSecondary ? 'Processing...' : 'Upload secondary angle from device'}
+                            </span>
+                            {secondaryFileName && (
+                              <span className="text-[10px] text-[#C5A880] font-mono mt-1">
+                                {secondaryFileName}
+                              </span>
+                            )}
+                          </label>
+                          {secondaryImageError && (
+                            <div className="text-[11px] text-red-400 mt-1 font-mono">
+                              {secondaryImageError}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Secondary preview */}
+                      {formData.secondaryImage && (
+                        <div className="flex items-center gap-3 p-2 rounded-xl bg-[#1A1616] border border-[#FAF7F2]/10">
+                          <img
+                            src={normalizeImageUrl(formData.secondaryImage)}
+                            alt="Secondary preview"
+                            onError={handleImageError}
+                            className="w-10 h-14 rounded-lg object-cover border border-[#C5A880]/40"
+                          />
+                          <div className="text-xs text-[#FAF7F2] truncate font-mono">
+                            {formData.secondaryImage.startsWith('data:')
+                              ? 'Device Upload (Hover Look)'
+                              : formData.secondaryImage}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Description */}

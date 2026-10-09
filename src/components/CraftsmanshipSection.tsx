@@ -109,7 +109,7 @@ export const CraftsmanshipSection: React.FC = () => {
               className="relative w-full max-w-sm sm:max-w-md mx-auto aspect-[3/4] rounded-2xl overflow-hidden shadow-2xl border border-[#C5A880]/30 hidden sm:block"
             >
               <img
-                src={normalizeImageUrl('/assets/images/editorial_model_kanjivaram_1790444829857.jpg')}
+                src={normalizeImageUrl('https://i.postimg.cc/rpgQNBWt/editorial-model-kanjivaram-1790444829857.jpg')}
                 alt="Emerald Kanjivaram silk drape"
                 referrerPolicy="no-referrer"
                 onError={handleImageError}

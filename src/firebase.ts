@@ -106,15 +106,31 @@ export function subscribeToProducts(
       const prods: Product[] = [];
       snapshot.forEach((docSnap) => {
         const data = docSnap.data() as Product;
+        const normPrimary = normalizeImageUrl(data.primaryImage);
+        const normSecondary = normalizeImageUrl(data.secondaryImage || data.primaryImage);
+        const normAltLooks = (data.altLooks || []).map((look) => ({
+          ...look,
+          image: normalizeImageUrl(look.image),
+        }));
+
+        // If Firestore had stored legacy relative paths, synchronize document to postimg link
+        if (data.primaryImage && data.primaryImage !== normPrimary) {
+          updateDoc(doc(db, 'products', docSnap.id), {
+            primaryImage: normPrimary,
+            secondaryImage: normSecondary,
+            altLooks: normAltLooks,
+            updatedAt: serverTimestamp(),
+          }).catch((err) => {
+            console.warn('[Firestore] Could not sync image URL upgrade:', err);
+          });
+        }
+
         prods.push({
           ...data,
           id: docSnap.id,
-          primaryImage: normalizeImageUrl(data.primaryImage),
-          secondaryImage: normalizeImageUrl(data.secondaryImage || data.primaryImage),
-          altLooks: (data.altLooks || []).map((look) => ({
-            ...look,
-            image: normalizeImageUrl(look.image),
-          })),
+          primaryImage: normPrimary,
+          secondaryImage: normSecondary,
+          altLooks: normAltLooks,
         });
       });
 
