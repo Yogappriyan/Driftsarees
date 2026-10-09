@@ -4,6 +4,7 @@ import { CRAFT_LOOM_IMAGE } from '../data/products';
 import { ShieldCheck, Award, Sparkles, Feather } from 'lucide-react';
 import { MagneticButton } from './MagneticButton';
 import { useShop } from '../context/ShopContext';
+import { handleImageError, normalizeImageUrl } from '../utils/imageFallback';
 
 export const CraftsmanshipSection: React.FC = () => {
   const { setActiveView } = useShop();
@@ -87,9 +88,10 @@ export const CraftsmanshipSection: React.FC = () => {
               className="relative w-full aspect-[16/10] rounded-3xl overflow-hidden shadow-2xl border border-[#FAF7F2]/10"
             >
               <img
-                src={CRAFT_LOOM_IMAGE}
+                src={normalizeImageUrl(CRAFT_LOOM_IMAGE)}
                 alt="Master weaver handling golden zari on handloom"
                 referrerPolicy="no-referrer"
+                onError={handleImageError}
                 className="w-full h-full object-cover filter brightness-90 contrast-105"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#120E0E] via-transparent to-black/30" />
@@ -107,9 +109,10 @@ export const CraftsmanshipSection: React.FC = () => {
               className="relative w-full max-w-sm sm:max-w-md mx-auto aspect-[3/4] rounded-2xl overflow-hidden shadow-2xl border border-[#C5A880]/30 hidden sm:block"
             >
               <img
-                src="/src/assets/images/editorial_model_kanjivaram_1790444829857.jpg"
+                src={normalizeImageUrl('/assets/images/editorial_model_kanjivaram_1790444829857.jpg')}
                 alt="Emerald Kanjivaram silk drape"
                 referrerPolicy="no-referrer"
+                onError={handleImageError}
                 className="w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />

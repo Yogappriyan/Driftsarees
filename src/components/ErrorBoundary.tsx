@@ -40,7 +40,7 @@ export class ErrorBoundary extends Component<Props, State> {
         <div className="min-h-screen bg-[#0D0B0B] text-[#ECE5DC] flex flex-col items-center justify-center p-6 text-center select-none font-sans">
           <div className="max-w-lg w-full bg-[#181315] border border-[#8C1D3B]/40 rounded-2xl p-8 shadow-2xl backdrop-blur-md">
             <span className="text-xs font-mono tracking-[0.3em] uppercase text-[#C5A880] block mb-2">
-              Maison Drift • System Recovery
+              VKT Silks and Sarees • System Recovery
             </span>
             <h1 className="font-serif text-3xl md:text-4xl text-[#FAF7F2] mb-3">
               Experience Paused

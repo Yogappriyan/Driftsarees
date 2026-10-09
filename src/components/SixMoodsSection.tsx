@@ -4,6 +4,7 @@ import { MOODS } from '../data/products';
 import { ArrowUpRight } from 'lucide-react';
 import { useShop } from '../context/ShopContext';
 import { scrollToElement } from '../utils/scroll';
+import { handleImageError, normalizeImageUrl } from '../utils/imageFallback';
 
 export const SixMoodsSection: React.FC = () => {
   const { setSelectedMoodFilter } = useShop();
@@ -40,7 +41,7 @@ export const SixMoodsSection: React.FC = () => {
         >
           <div>
             <div className="flex items-center gap-2 text-xs tracking-[0.3em] uppercase text-[#C5A880] mb-2 font-medium font-mono">
-              <span>THE DRIFT ARCHIVE</span>
+              <span>THE VKT SILKS AND SAREES ARCHIVE</span>
               <span>·</span>
               <span>CURATED THEMES</span>
             </div>
@@ -77,9 +78,10 @@ export const SixMoodsSection: React.FC = () => {
               {/* Arched Image Container */}
               <div className="relative w-full aspect-[9/16] rounded-t-[100px] rounded-b-2xl overflow-hidden bg-[#181514] border border-[#FAF7F2]/10 group-hover:border-[#C5A880]/60 transition-all duration-700 shadow-xl group-hover:shadow-2xl group-hover:shadow-[#541123]/30">
                 <img
-                  src={mood.image}
+                  src={normalizeImageUrl(mood.image)}
                   alt={mood.name}
                   referrerPolicy="no-referrer"
+                  onError={handleImageError}
                   className="w-full h-full object-cover object-center filter brightness-[0.85] group-hover:brightness-100 group-hover:scale-108 transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]"
                 />
 

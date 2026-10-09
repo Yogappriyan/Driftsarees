@@ -65,8 +65,8 @@ export const Preloader: React.FC<PreloaderProps> = ({ onComplete }) => {
               transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
               className="mb-2"
             >
-              <h1 className="font-serif text-5xl md:text-7xl font-normal tracking-[0.25em] text-[#FAF7F2] uppercase">
-                DRIFT
+              <h1 className="font-serif text-3xl sm:text-5xl md:text-6xl font-normal tracking-[0.16em] text-[#FAF7F2] uppercase">
+                VKT Silks and Sarees
               </h1>
               <p className="font-sans text-xs md:text-sm tracking-[0.4em] text-[#C5A880] uppercase mt-2 font-medium font-mono">
                 Draped in Stories

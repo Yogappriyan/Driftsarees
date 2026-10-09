@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useShop } from '../context/ShopContext';
+import { handleImageError, normalizeImageUrl } from '../utils/imageFallback';
 
 export const FlyToCartAnimation: React.FC = () => {
   const { flyAnimation } = useShop();
@@ -41,8 +42,9 @@ export const FlyToCartAnimation: React.FC = () => {
         className="fixed z-[10000] w-20 h-28 -translate-x-1/2 -translate-y-1/2 rounded-xl overflow-hidden pointer-events-none shadow-2xl border-2 border-[#C5A880]"
       >
         <img
-          src={flyAnimation.image}
+          src={normalizeImageUrl(flyAnimation.image)}
           alt="Adding to bag"
+          onError={handleImageError}
           className="w-full h-full object-cover"
         />
       </motion.div>

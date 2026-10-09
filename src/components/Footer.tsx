@@ -48,7 +48,7 @@ export const Footer: React.FC = () => {
             {subscribed ? (
               <div className="flex items-center gap-2 text-xs text-[#C5A880] font-mono tracking-wider">
                 <CheckCircle2 className="w-4 h-4 text-[#C5A880]" />
-                <span>You have been entered into the DRIFT Private Salon.</span>
+                <span>You have been entered into the VKT Silks and Sarees Private Salon.</span>
               </div>
             ) : (
               <form onSubmit={handleSubscribe} className="flex max-w-md gap-2">
@@ -156,8 +156,8 @@ export const Footer: React.FC = () => {
         {/* Bottom Bar */}
         <div className="pt-10 flex flex-col sm:flex-row items-center justify-between gap-6 text-xs text-[#ECE5DC]/50 font-mono">
           <div className="flex items-center gap-4">
-            <span className="font-serif text-2xl tracking-[0.25em] uppercase text-[#FAF7F2]">
-              DRIFT
+            <span className="font-serif text-xl sm:text-2xl tracking-[0.16em] uppercase text-[#FAF7F2]">
+              VKT SILKS AND SAREES
             </span>
             <span className="text-[10px] font-mono tracking-widest text-[#C5A880] uppercase">
               Draped in Stories
@@ -165,7 +165,7 @@ export const Footer: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-6 text-[11px]">
-            <span>© 2026 DRIFT Haute Couture</span>
+            <span>© 2026 VKT Silks and Sarees</span>
             <span>·</span>
             <span>All rights reserved</span>
             <span>·</span>

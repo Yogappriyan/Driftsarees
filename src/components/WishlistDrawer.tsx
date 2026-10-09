@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useShop } from '../context/ShopContext';
 import { X, Heart, ShoppingBag, Trash2 } from 'lucide-react';
 import { PRODUCTS } from '../data/products';
+import { handleImageError, normalizeImageUrl } from '../utils/imageFallback';
 
 export const WishlistDrawer: React.FC = () => {
   const {
@@ -77,9 +78,10 @@ export const WishlistDrawer: React.FC = () => {
                     className="flex gap-4 p-3 rounded-2xl bg-[#181414] border border-[#FAF7F2]/5 group"
                   >
                     <img
-                      src={product.primaryImage}
+                      src={normalizeImageUrl(product.primaryImage)}
                       alt={product.name}
                       referrerPolicy="no-referrer"
+                      onError={handleImageError}
                       onClick={() => {
                         setSelectedProduct(product);
                         setIsWishlistOpen(false);

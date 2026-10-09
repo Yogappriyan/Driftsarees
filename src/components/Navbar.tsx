@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, Heart, ShoppingBag, Menu, X, ArrowRight, ShieldCheck, Sparkles } from 'lucide-react';
+import { Search, Heart, ShoppingBag, Menu, X, ArrowRight, ShieldCheck, Sparkles, LogIn, LogOut } from 'lucide-react';
 import { useShop } from '../context/ShopContext';
 import { scrollToElement } from '../utils/scroll';
+import { AuthButton } from './AuthButton';
 
 export const Navbar: React.FC = () => {
   const {
@@ -115,10 +116,10 @@ export const Navbar: React.FC = () => {
                 }}
                 className="group flex flex-col items-start cursor-pointer"
               >
-                <span className="font-serif text-2xl md:text-3xl font-medium tracking-[0.28em] text-[#FAF7F2] group-hover:text-[#C5A880] transition-colors uppercase">
-                  DRIFT
+                <span className="font-serif text-xl sm:text-2xl md:text-2xl font-medium tracking-[0.16em] text-[#FAF7F2] group-hover:text-[#C5A880] transition-colors uppercase whitespace-nowrap">
+                  VKT Silks and Sarees
                 </span>
-                <span className="text-[9px] tracking-[0.35em] text-[#C5A880] uppercase -mt-1 font-light opacity-90 hidden sm:block font-mono">
+                <span className="text-[9px] tracking-[0.35em] text-[#C5A880] uppercase mt-0.5 font-light opacity-90 hidden sm:block font-mono">
                   Draped in Stories
                 </span>
               </a>
@@ -177,6 +178,9 @@ export const Navbar: React.FC = () => {
                 <ShieldCheck className="w-4 h-4 text-[#C5A880]" />
                 <span className="hidden xl:inline">Admin</span>
               </button>
+
+              {/* Google Authentication */}
+              <AuthButton />
 
               {/* Wishlist Button with Badge */}
               <button
@@ -259,8 +263,8 @@ export const Navbar: React.FC = () => {
             >
               <div>
                 <div className="flex items-center justify-between pb-6 border-b border-[#FAF7F2]/10">
-                  <span className="font-serif text-2xl tracking-[0.2em] text-[#FAF7F2]">
-                    DRIFT
+                  <span className="font-serif text-lg sm:text-xl tracking-[0.14em] text-[#FAF7F2] uppercase">
+                    VKT Silks and Sarees
                   </span>
                   <button
                     onClick={() => setMobileMenuOpen(false)}
@@ -285,6 +289,11 @@ export const Navbar: React.FC = () => {
                     </button>
                   ))}
 
+                  {/* Mobile Google Auth Section */}
+                  <div className="pt-2">
+                    <AuthButton />
+                  </div>
+
                   {/* Mobile Admin Portal Button */}
                   <button
                     onClick={() => {
@@ -305,7 +314,7 @@ export const Navbar: React.FC = () => {
               <div className="pt-6 border-t border-[#FAF7F2]/10 text-xs text-[#ECE5DC]/60 flex flex-col gap-2 font-mono">
                 <p className="tracking-widest uppercase text-[#C5A880]">DRAPED IN STORIES</p>
                 <p className="font-sans text-xs">Pure Handloom Silks &amp; Bespoke Bridal Couture</p>
-                <p className="text-[10px] mt-2">© 2026 DRIFT Haute Couture</p>
+                <p className="text-[10px] mt-2">© 2026 VKT Silks and Sarees</p>
               </div>
             </motion.div>
           </motion.div>

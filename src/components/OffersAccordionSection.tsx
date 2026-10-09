@@ -4,6 +4,7 @@ import { CURRENT_OFFERS } from '../data/products';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import { useShop } from '../context/ShopContext';
 import { scrollToElement } from '../utils/scroll';
+import { handleImageError, normalizeImageUrl } from '../utils/imageFallback';
 
 export const OffersAccordionSection: React.FC = () => {
   const [activeId, setActiveId] = useState<string>('02');
@@ -66,9 +67,10 @@ export const OffersAccordionSection: React.FC = () => {
               >
                 {/* Background Image */}
                 <img
-                  src={offer.image}
+                  src={normalizeImageUrl(offer.image)}
                   alt={offer.title}
                   referrerPolicy="no-referrer"
+                  onError={handleImageError}
                   className={`absolute inset-0 w-full h-full object-cover object-center filter ${
                     isActive ? 'brightness-90 scale-100' : 'brightness-[0.35] grayscale scale-105'
                   } transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]`}
@@ -154,3 +156,4 @@ export const OffersAccordionSection: React.FC = () => {
     </section>
   );
 };
+  

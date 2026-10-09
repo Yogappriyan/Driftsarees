@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { ChevronLeft, ChevronRight, ShoppingBag, Eye, Heart } from 'lucide-react';
 import { useShop } from '../context/ShopContext';
 import { Product } from '../types';
+import { handleImageError, normalizeImageUrl } from '../utils/imageFallback';
 
 export const CurvedShowcaseSection: React.FC = () => {
   const { products, setSelectedProduct, addToCart, toggleWishlist, isInWishlist, setCursorMode } = useShop();
@@ -73,7 +74,7 @@ export const CurvedShowcaseSection: React.FC = () => {
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-[#FAF7F2]/10 pb-8">
           <div>
             <div className="text-xs tracking-[0.35em] uppercase text-[#C5A880] mb-2 font-medium font-mono">
-              THE DRIFT SIGNATURES
+              THE VKT SILKS AND SAREES SIGNATURES
             </div>
             <h2 className="font-serif text-4xl sm:text-5xl md:text-6xl text-[#FAF7F2] font-normal tracking-tight">
               Woven to Be <span className="font-serif italic text-[#C5A880] font-light">Remembered</span>
@@ -157,17 +158,19 @@ export const CurvedShowcaseSection: React.FC = () => {
                   {/* Primary & Secondary Image Swap on Hover */}
                   <div className="relative w-full h-full overflow-hidden">
                     <img
-                      src={product.primaryImage}
+                      src={normalizeImageUrl(product.primaryImage)}
                       alt={product.name}
                       referrerPolicy="no-referrer"
+                      onError={handleImageError}
                       className={`absolute inset-0 w-full h-full object-cover object-center transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${
                         isHovered ? 'scale-105 opacity-0' : 'scale-100 opacity-100'
                       }`}
                     />
                     <img
-                      src={product.secondaryImage || product.primaryImage}
+                      src={normalizeImageUrl(product.secondaryImage || product.primaryImage)}
                       alt={`${product.name} detail view`}
                       referrerPolicy="no-referrer"
+                      onError={handleImageError}
                       className={`absolute inset-0 w-full h-full object-cover object-center transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${
                         isHovered ? 'scale-105 opacity-100' : 'scale-100 opacity-0'
                       }`}

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useShop } from '../context/ShopContext';
 import { X, Trash2, ArrowRight, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { handleImageError, normalizeImageUrl } from '../utils/imageFallback';
 
 export const CartDrawer: React.FC = () => {
   const {
@@ -137,9 +138,10 @@ export const CartDrawer: React.FC = () => {
                       >
                         {/* Thumbnail */}
                         <img
-                          src={item.product.primaryImage}
+                          src={normalizeImageUrl(item.product.primaryImage)}
                           alt={item.product.name}
                           referrerPolicy="no-referrer"
+                          onError={handleImageError}
                           onClick={() => {
                             setSelectedProduct(item.product);
                             setIsCartOpen(false);

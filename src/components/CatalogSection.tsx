@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Product } from '../types';
 import { useShop } from '../context/ShopContext';
 import { Heart, ShoppingBag, RotateCcw } from 'lucide-react';
+import { handleImageError, normalizeImageUrl } from '../utils/imageFallback';
 
 export const CatalogSection: React.FC = () => {
   const {
@@ -185,17 +186,19 @@ export const CatalogSection: React.FC = () => {
                     {/* Image Card Container */}
                     <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-[#161313] border border-[#FAF7F2]/10 group-hover:border-[#C5A880]/50 transition-all duration-500 shadow-lg group-hover:shadow-2xl">
                       <img
-                        src={product.primaryImage}
+                        src={normalizeImageUrl(product.primaryImage)}
                         alt={product.name}
                         referrerPolicy="no-referrer"
+                        onError={handleImageError}
                         className={`absolute inset-0 w-full h-full object-cover object-center transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${
                           isHovered ? 'scale-105 opacity-0' : 'scale-100 opacity-100'
                         }`}
                       />
                       <img
-                        src={product.secondaryImage || product.primaryImage}
+                        src={normalizeImageUrl(product.secondaryImage || product.primaryImage)}
                         alt={`${product.name} alternate view`}
                         referrerPolicy="no-referrer"
+                        onError={handleImageError}
                         className={`absolute inset-0 w-full h-full object-cover object-center transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${
                           isHovered ? 'scale-105 opacity-100' : 'scale-100 opacity-0'
                         }`}

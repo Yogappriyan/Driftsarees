@@ -6,6 +6,7 @@ import { MagneticButton } from './MagneticButton';
 import { useShop } from '../context/ShopContext';
 import { scrollToElement } from '../utils/scroll';
 import { boutiqueAudio } from '../utils/audio';
+import { handleImageError, normalizeImageUrl } from '../utils/imageFallback';
 
 export const HeroSection: React.FC = () => {
   const { setActiveView } = useShop();
@@ -61,9 +62,10 @@ export const HeroSection: React.FC = () => {
         transition={{ type: 'spring', stiffness: 40, damping: 25 }}
       >
         <img
-          src={HERO_IMAGE}
-          alt="DRIFT Luxury Bridal Salon and Handloom Silk Gallery"
+          src={normalizeImageUrl(HERO_IMAGE)}
+          alt="VKT Silks and Sarees Luxury Bridal Salon and Handloom Silk Gallery"
           referrerPolicy="no-referrer"
+          onError={handleImageError}
           className="w-full h-full object-cover object-center filter brightness-[0.78] contrast-[1.08]"
         />
 

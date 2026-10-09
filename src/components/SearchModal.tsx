@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useShop } from '../context/ShopContext';
 import { Search, X, ArrowRight } from 'lucide-react';
 import { PRODUCTS } from '../data/products';
+import { handleImageError, normalizeImageUrl } from '../utils/imageFallback';
 
 export const SearchModal: React.FC = () => {
   const { isSearchOpen, setIsSearchOpen, setSelectedProduct, products } = useShop();
@@ -112,9 +113,10 @@ export const SearchModal: React.FC = () => {
               >
                 <div className="flex items-center gap-3">
                   <img
-                    src={product.primaryImage}
+                    src={normalizeImageUrl(product.primaryImage)}
                     alt={product.name}
                     referrerPolicy="no-referrer"
+                    onError={handleImageError}
                     className="w-12 h-16 object-cover rounded-lg"
                   />
                   <div>
@@ -139,7 +141,7 @@ export const SearchModal: React.FC = () => {
         {/* Footer info */}
         <div className="px-5 py-2.5 bg-[#0F0D0D] border-t border-[#FAF7F2]/5 flex items-center justify-between text-[11px] text-[#ECE5DC]/50 font-mono">
           <span>Press ESC to close</span>
-          <span>DRIFT Archive 2026</span>
+          <span>VKT Silks and Sarees Archive 2026</span>
         </div>
       </motion.div>
     </div>

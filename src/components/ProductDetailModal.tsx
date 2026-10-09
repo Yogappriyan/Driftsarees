@@ -4,6 +4,7 @@ import { Product } from '../types';
 import { useShop } from '../context/ShopContext';
 import { X, Heart, ShieldCheck, Truck, RotateCcw, ArrowRight, Star, Ruler, Sparkles } from 'lucide-react';
 import { PRODUCTS } from '../data/products';
+import { handleImageError, normalizeImageUrl } from '../utils/imageFallback';
 
 interface ProductDetailModalProps {
   product: Product | null;
@@ -94,9 +95,10 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
                       }`}
                     >
                       <img
-                        src={look.image}
+                        src={normalizeImageUrl(look.image)}
                         alt={look.label}
                         referrerPolicy="no-referrer"
+                        onError={handleImageError}
                         className="w-full h-full object-cover"
                       />
                       <span className="absolute bottom-0 inset-x-0 bg-black/70 text-[8px] text-white p-0.5 text-center font-mono">
@@ -111,9 +113,10 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
                   <AnimatePresence mode="wait">
                     <motion.img
                       key={activeImage}
-                      src={activeImage}
+                      src={normalizeImageUrl(activeImage)}
                       alt={product.name}
                       referrerPolicy="no-referrer"
+                      onError={handleImageError}
                       initial={{ opacity: 0, scale: 1.04 }}
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0 }}
